@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
+import { BASE_URL } from "@/lib/api-config";
 
 const loginSchema = z.object({
   email: z.string().min(1, "Email or Matric No is required"),
@@ -32,7 +33,7 @@ export default function Login() {
   async function onSubmit(data: LoginFormValues) {
     setIsLoading(true);
     try {
-      const response = await fetch("/api/login", {
+      const response = await fetch(`${BASE_URL}/api/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

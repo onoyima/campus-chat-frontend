@@ -35,6 +35,7 @@ export default function Login() {
       const response = await fetch("/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify(data),
       });
 
@@ -44,21 +45,29 @@ export default function Login() {
           title: "Success",
           description: result.message || "Logged in successfully",
         });
-        // Redirect to home or dashboard
-        window.location.href = "/"; // Force refresh to update auth state
+        window.location.href = "/";
       } else {
-        const error = await response.json();
+        const text = await response.text();
+        let errorMessage = "Login failed";
+        try {
+          const errorData = JSON.parse(text);
+          errorMessage = errorData.message || errorMessage;
+        } catch (e) {
+          errorMessage = text || errorMessage;
+        }
+        
         toast({
           variant: "destructive",
           title: "Error",
-          description: error.message || "Login failed",
+          description: errorMessage,
         });
       }
-    } catch (err) {
+    } catch (err: any) {
+      console.error("Login fetch error:", err);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "An unexpected error occurred",
+        description: err.message || "An unexpected error occurred",
       });
     } finally {
       setIsLoading(false);

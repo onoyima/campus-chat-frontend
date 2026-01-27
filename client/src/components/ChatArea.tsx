@@ -6,7 +6,7 @@ import { useWebSocket } from "@/hooks/use-websocket";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, Paperclip, MoreVertical, Phone, Video, Loader2, ArrowLeft, Info, Mic, StopCircle, Trash2, Edit2, Check, X, Shield, CheckCheck } from "lucide-react";
+import { Send, Paperclip, MoreVertical, Phone, Video, Loader2, ArrowLeft, Info, Mic, StopCircle, Trash2, Edit2, Check, X, Shield, CheckCheck, Play, Pause } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -45,6 +45,10 @@ export function ChatArea({ conversationId, onBack }: ChatAreaProps) {
   // Voice Recording State
   const [isRecording, setIsRecording] = useState(false);
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
+
+  // Audio Playback State
+  const [playingAudioId, setPlayingAudioId] = useState<number | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // --- 2. DERIVED STATE ---
   const conversation = conversationData?.conversation;
@@ -95,15 +99,24 @@ export function ChatArea({ conversationId, onBack }: ChatAreaProps) {
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream);
+      // Check for MP4 support (better for Safari/Mobile)
+      let mimeType = 'audio/webm';
+      let extension = 'webm';
+      
+      if (MediaRecorder.isTypeSupported('audio/mp4')) {
+          mimeType = 'audio/mp4';
+          extension = 'mp4';
+      }
+
+      const recorder = new MediaRecorder(stream, { mimeType });
       const chunks: BlobPart[] = [];
 
       recorder.ondataavailable = (e) => chunks.push(e.data);
       recorder.onstop = async () => {
-        const blob = new Blob(chunks, { type: 'audio/webm' });
+        const blob = new Blob(chunks, { type: mimeType });
         
         const formData = new FormData();
-        formData.append('file', blob, 'voice-note.webm');
+        formData.append('file', blob, `voice-note.${extension}`);
         
         try {
             const res = await fetch('/api/upload', {
@@ -148,6 +161,32 @@ export function ChatArea({ conversationId, onBack }: ChatAreaProps) {
         setIsRecording(false);
         setMediaRecorder(null);
     }
+  };
+
+  const handlePlayAudio = (url: string, id: number) => {
+      if (playingAudioId === id) {
+          // Pause/Stop
+          if (audioRef.current) {
+              audioRef.current.pause();
+              setPlayingAudioId(null);
+          }
+          return;
+      }
+
+      // Stop previous
+      if (audioRef.current) {
+          audioRef.current.pause();
+      }
+
+      const audio = new Audio(url);
+      audioRef.current = audio;
+      
+      audio.play().catch(e => console.error("Playback failed", e));
+      setPlayingAudioId(id);
+
+      audio.onended = () => {
+          setPlayingAudioId(null);
+      };
   };
 
   const handleCall = (type: 'audio' | 'video') => {
@@ -320,8 +359,41 @@ export function ChatArea({ conversationId, onBack }: ChatAreaProps) {
                         </div>
                     ) : (
                         msg.type === 'audio' && (msg.metadata as any)?.url ? (
-                            <div className="flex items-center gap-2 min-w-[200px]">
-                                <audio controls src={(msg.metadata as any).url} className="h-8 w-full" />
+                            <div 
+                                className="flex items-center gap-3 min-w-[200px] p-2 cursor-pointer hover:brightness-95 transition-all select-none"
+                                onClick={() => handlePlayAudio((msg.metadata as any).url, msg.id)}
+                            >
+                                <div className={cn(
+                                    "h-8 w-8 rounded-full flex items-center justify-center shrink-0 border",
+                                    isMe ? "bg-black/10 border-black/5" : "bg-white/20 border-white/10"
+                                )}>
+                                    {playingAudioId === msg.id ? (
+                                        <Pause className="h-4 w-4 fill-current" />
+                                    ) : (
+                                        <Play className="h-4 w-4 ml-0.5 fill-current" />
+                                    )}
+                                </div>
+                                
+                                {/* Waveform Visualizer */}
+                                <div className="flex items-center gap-0.5 h-6">
+                                    {[3, 5, 8, 5, 3, 4, 7, 5, 2, 4, 6, 3, 5, 4, 6].map((h, i) => (
+                                        <div 
+                                            key={i} 
+                                            className={cn(
+                                                "w-1 rounded-full opacity-60",
+                                                isMe ? "bg-foreground" : "bg-foreground"
+                                            )}
+                                            style={{ 
+                                                height: playingAudioId === msg.id ? `${Math.random() * 14 + 6}px` : `${h * 2}px`,
+                                                transition: 'height 0.15s ease' 
+                                            }} 
+                                        />
+                                    ))}
+                                </div>
+                                
+                                <span className="text-[10px] opacity-70 ml-2 whitespace-nowrap font-medium tabular-nums">
+                                    {(msg.metadata as any).duration ? `${Math.floor((msg.metadata as any).duration)}s` : 'Voice'}
+                                </span>
                             </div>
                         ) : (
                             <p className="whitespace-pre-wrap break-words relative z-10">{msg.content}</p>

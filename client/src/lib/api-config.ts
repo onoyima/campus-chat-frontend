@@ -1,34 +1,19 @@
-// API Configuration for separate hosting
-const API_BASE_URL = import.meta.env.VITE_API_URL || "";
+// Use environment variable if set, otherwise fallback based on mode:
+// Development -> localhost:5000
+// Production -> https://veritas-uk6l.onrender.com
+export const BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? "http://localhost:5000" : "https://veritas-uk6l.onrender.com");
 
-/**
- * Get the full API URL
- * - In development: returns empty string (uses proxy or same origin)
- * - In production: returns the backend URL from VITE_API_URL env var
- */
-export function getApiUrl(path: string): string {
-    // If path already includes protocol, return as-is
-    if (path.startsWith('http://') || path.startsWith('https://')) {
-        return path;
-    }
+export const buildUrl = (path: string) => {
+    // If path starts with http, return it
+    if (path.startsWith('http')) return path;
 
-    // Ensure path starts with /
-    const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+    // If BASE_URL is just origin (development proxy case), relative path is fine
+    // But if we want explicit backend optionality:
+    if (BASE_URL === window.location.origin) return path;
 
-    return `${API_BASE_URL}${normalizedPath}`;
-}
+    // Remove leading slash from path if base url has trailing slash
+    const cleanBase = BASE_URL.endsWith('/') ? BASE_URL.slice(0, -1) : BASE_URL;
+    const cleanPath = path.startsWith('/') ? path : `/${path}`;
 
-/**
- * Fetch wrapper that automatically prepends API base URL
- */
-export async function apiFetch(path: string, options?: RequestInit): Promise<Response> {
-    const url = getApiUrl(path);
-
-    // Always include credentials for cookie-based auth
-    const fetchOptions: RequestInit = {
-        ...options,
-        credentials: 'include',
-    };
-
-    return fetch(url, fetchOptions);
-}
+    return `${cleanBase}${cleanPath}`;
+};

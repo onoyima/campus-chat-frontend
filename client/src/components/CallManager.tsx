@@ -132,7 +132,7 @@ export function CallManager() {
                 }
                 
                 if (data.type === 'call_ended') {
-                    endCall();
+                    endCall(false);
                 }
 
             } catch (err) {
@@ -194,8 +194,25 @@ export function CallManager() {
         }
     };
 
-    const endCall = () => {
-        if (remoteIdentityId) {
+    // Ringtone
+    const ringtoneRef = useRef<HTMLAudioElement | null>(null);
+
+    useEffect(() => {
+        if (callState === 'incoming') {
+            const audio = new Audio("https://cdn.freesound.org/previews/385/385315_7294779-lq.mp3"); // Generic phone ring
+            audio.loop = true;
+            audio.play().catch(() => {}); // Autoplay might block
+            ringtoneRef.current = audio;
+        } else {
+            if (ringtoneRef.current) {
+                ringtoneRef.current.pause();
+                ringtoneRef.current = null;
+            }
+        }
+    }, [callState]);
+
+    const endCall = (notify = true) => {
+        if (notify && remoteIdentityId) {
              sendMessage("call_ended", { targetIdentityId: remoteIdentityId });
         }
         

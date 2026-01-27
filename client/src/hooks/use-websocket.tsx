@@ -1,6 +1,7 @@
 
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { useAuth } from './use-auth';
+import { BASE_URL } from "@/lib/api-config";
 import { useQueryClient } from '@tanstack/react-query';
 import { api } from '@shared/routes';
 import { useToast } from './use-toast';
@@ -33,9 +34,25 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
     }
 
     // Connect to WS
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const host = window.location.host;
-    const wsUrl = `${protocol}//${host}/ws`;
+    const getWsUrl = () => {
+        let url = BASE_URL;
+        
+        // If BASE_URL is absolute
+        if (url.startsWith('http')) {
+            url = url.replace(/^http/, 'ws');
+        } else {
+            // Fallback (relative path or just origin)
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            url = `${protocol}//${window.location.host}`;
+        }
+
+        // Ensure no trailing slash before appending /ws
+        if (url.endsWith('/')) url = url.slice(0, -1);
+        
+        return `${url}/ws`;
+    };
+
+    const wsUrl = getWsUrl();
 
     console.log("Connecting to WS:", wsUrl);
     const ws = new WebSocket(wsUrl);
@@ -63,6 +80,7 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
         console.log('WS Message:', data);
 
         // Handle Events
+        // Reading file first.s
         switch (data.type) {
           case 'new_message':
             // 1. Invalidate message list for this conversation

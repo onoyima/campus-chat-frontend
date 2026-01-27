@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, buildUrl, errorSchemas } from "@shared/routes";
 import { useToast } from "@/hooks/use-toast";
+import { BASE_URL } from "@/lib/api-config";
 
 // GET /api/conversations/:id/messages
 export function useMessages(conversationId: number | null) {
@@ -9,11 +10,11 @@ export function useMessages(conversationId: number | null) {
     queryFn: async () => {
       if (!conversationId) return [];
       const url = buildUrl(api.messages.list.path, { id: conversationId });
-      const res = await fetch(url, { credentials: "include" });
+      const res = await fetch(`${BASE_URL}${url}`, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to fetch messages");
       // Reverse to show newest at bottom if backend sends newest first
       const data = api.messages.list.responses[200].parse(await res.json());
-      return data; 
+      return data;
     },
     enabled: !!conversationId,
     refetchInterval: 2000, // Faster polling for chat
@@ -27,7 +28,7 @@ export function useDeleteMessage() {
 
   return useMutation({
     mutationFn: async ({ messageId }: { messageId: number }) => {
-      const res = await fetch(`/api/messages/${messageId}`, {
+      const res = await fetch(`${BASE_URL}/api/messages/${messageId}`, {
         method: 'DELETE',
         credentials: "include",
       });
@@ -59,7 +60,7 @@ export function useEditMessage() {
 
   return useMutation({
     mutationFn: async ({ messageId, content }: { messageId: number, content: string }) => {
-      const res = await fetch(`/api/messages/${messageId}`, {
+      const res = await fetch(`${BASE_URL}/api/messages/${messageId}`, {
         method: 'PATCH',
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ content }),
@@ -94,7 +95,7 @@ export function useSendMessage() {
   return useMutation({
     mutationFn: async ({ conversationId, content, type = 'text', metadata }: { conversationId: number, content: string, type?: 'text' | 'file' | 'audio' | 'video' | 'image' | 'voice_note', metadata?: any }) => {
       const url = buildUrl(api.messages.create.path, { id: conversationId });
-      const res = await fetch(url, {
+      const res = await fetch(`${BASE_URL}${url}`, {
         method: api.messages.create.method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ content, type, metadata }),
@@ -103,8 +104,8 @@ export function useSendMessage() {
 
       if (!res.ok) {
         if (res.status === 403) {
-           const error = errorSchemas.forbidden.parse(await res.json());
-           throw new Error(error.message);
+          const error = errorSchemas.forbidden.parse(await res.json());
+          throw new Error(error.message);
         }
         throw new Error("Failed to send message");
       }

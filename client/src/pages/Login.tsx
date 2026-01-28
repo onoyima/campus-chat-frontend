@@ -33,15 +33,18 @@ export default function Login() {
   async function onSubmit(data: LoginFormValues) {
     setIsLoading(true);
     try {
-      const response = await fetch(`${BASE_URL}/api/login`, {
+      const response = await fetch(`${BASE_URL}/api/auth/token`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify(data),
       });
 
       if (response.ok) {
         const result = await response.json();
+        
+        // Store JWT token in localStorage
+        localStorage.setItem("auth_token", result.token);
+        
         toast({
           title: "Success",
           description: result.message || "Logged in successfully",

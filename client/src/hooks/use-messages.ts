@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, buildUrl, errorSchemas } from "@shared/routes";
 import { useToast } from "@/hooks/use-toast";
-import { BASE_URL } from "@/lib/api-config";
+import { BASE_URL, getAuthHeaders } from "@/lib/api-config";
 
 // GET /api/conversations/:id/messages
 export function useMessages(conversationId: number | null) {
@@ -10,7 +10,7 @@ export function useMessages(conversationId: number | null) {
     queryFn: async () => {
       if (!conversationId) return [];
       const url = buildUrl(api.messages.list.path, { id: conversationId });
-      const res = await fetch(`${BASE_URL}${url}`, { credentials: "include" });
+      const res = await fetch(`${BASE_URL}${url}`, { headers: getAuthHeaders() });
       if (!res.ok) throw new Error("Failed to fetch messages");
       // Reverse to show newest at bottom if backend sends newest first
       const data = api.messages.list.responses[200].parse(await res.json());
@@ -30,7 +30,7 @@ export function useDeleteMessage() {
     mutationFn: async ({ messageId }: { messageId: number }) => {
       const res = await fetch(`${BASE_URL}/api/messages/${messageId}`, {
         method: 'DELETE',
-        credentials: "include",
+        headers: getAuthHeaders(),
       });
 
       if (!res.ok) {
@@ -62,9 +62,8 @@ export function useEditMessage() {
     mutationFn: async ({ messageId, content }: { messageId: number, content: string }) => {
       const res = await fetch(`${BASE_URL}/api/messages/${messageId}`, {
         method: 'PATCH',
-        headers: { "Content-Type": "application/json" },
+        headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
         body: JSON.stringify({ content }),
-        credentials: "include",
       });
 
       if (!res.ok) {
@@ -97,9 +96,8 @@ export function useSendMessage() {
       const url = buildUrl(api.messages.create.path, { id: conversationId });
       const res = await fetch(`${BASE_URL}${url}`, {
         method: api.messages.create.method,
-        headers: { "Content-Type": "application/json" },
+        headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
         body: JSON.stringify({ content, type, metadata }),
-        credentials: "include",
       });
 
       if (!res.ok) {

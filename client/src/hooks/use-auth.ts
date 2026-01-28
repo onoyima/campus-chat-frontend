@@ -1,13 +1,21 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { User } from "@shared/models/auth";
-import { BASE_URL } from "@/lib/api-config";
+import { BASE_URL, getAuthHeaders } from "@/lib/api-config";
 
 async function fetchUser(): Promise<User | null> {
+  const token = localStorage.getItem("auth_token");
+
+  if (!token) {
+    return null;
+  }
+
   const response = await fetch(`${BASE_URL}/api/auth/user`, {
-    credentials: "include",
+    headers: getAuthHeaders(),
   });
 
   if (response.status === 401) {
+    // Token is invalid or expired, clear it
+    localStorage.removeItem("auth_token");
     return null;
   }
 
@@ -19,12 +27,18 @@ async function fetchUser(): Promise<User | null> {
 }
 
 async function logout(): Promise<void> {
-  const response = await fetch(`${BASE_URL}/api/logout`, {
-    method: "POST",
-  });
+  // Clear token from localStorage
+  localStorage.removeItem("auth_token");
 
-  if (!response.ok) {
-    throw new Error("Logout failed");
+  // Optionally call backend logout endpoint
+  try {
+    await fetch(`${BASE_URL}/api/logout`, {
+      method: "POST",
+      headers: getAuthHeaders(),
+    });
+  } catch (error) {
+    // Ignore errors, token is already cleared
+    console.error("Logout API call failed:", error);
   }
 }
 

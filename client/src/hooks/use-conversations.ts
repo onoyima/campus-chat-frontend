@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, buildUrl, errorSchemas } from "@shared/routes";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
-import { BASE_URL } from "@/lib/api-config";
+import { BASE_URL, getAuthHeaders } from "@/lib/api-config";
 
 // GET /api/conversations
 export function useConversations() {
@@ -10,7 +10,7 @@ export function useConversations() {
   return useQuery({
     queryKey: [api.conversations.list.path],
     queryFn: async () => {
-      const res = await fetch(`${BASE_URL}${api.conversations.list.path}`, { credentials: "include" });
+      const res = await fetch(`${BASE_URL}${api.conversations.list.path}`, { headers: getAuthHeaders() });
       if (res.status === 401) return [];
       if (!res.ok) throw new Error("Failed to fetch conversations");
       return api.conversations.list.responses[200].parse(await res.json());
@@ -28,7 +28,7 @@ export function useConversation(id: number | null) {
     queryFn: async () => {
       if (!id) return null;
       const url = buildUrl(api.conversations.get.path, { id });
-      const res = await fetch(`${BASE_URL}${url}`, { credentials: "include" });
+      const res = await fetch(`${BASE_URL}${url}`, { headers: getAuthHeaders() });
       if (res.status === 404) return null;
       if (res.status === 401) return null;
       if (!res.ok) throw new Error("Failed to fetch conversation");
@@ -48,9 +48,8 @@ export function useCreateDirectChat() {
     mutationFn: async (targetIdentityId: number) => {
       const res = await fetch(`${BASE_URL}${api.conversations.createDirect.path}`, {
         method: api.conversations.createDirect.method,
-        headers: { "Content-Type": "application/json" },
+        headers: { ...getAuthHeaders(), "Content-Type": "application/json" },
         body: JSON.stringify({ targetIdentityId }),
-        credentials: "include",
       });
 
       if (!res.ok) {

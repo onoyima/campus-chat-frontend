@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api, buildUrl } from "@shared/routes";
 import { useAuth } from "@/hooks/use-auth";
-import { BASE_URL } from "@/lib/api-config";
+import { BASE_URL, getAuthHeaders } from "@/lib/api-config";
 
 // GET /api/identity/me
 export function useMyIdentity() {
@@ -10,7 +10,7 @@ export function useMyIdentity() {
   return useQuery({
     queryKey: [api.identity.me.path],
     queryFn: async () => {
-      const res = await fetch(`${BASE_URL}${api.identity.me.path}`, { credentials: "include" });
+      const res = await fetch(`${BASE_URL}${api.identity.me.path}`, { headers: getAuthHeaders() });
       if (res.status === 401) return null;
       if (res.status === 404) return null; // Not set up yet
       if (!res.ok) throw new Error('Failed to fetch identity');
@@ -35,7 +35,7 @@ export function useIdentities(params?: { search?: string; role?: string; departm
 
       const url = buildUrl(api.identity.list.path) + "?" + new URLSearchParams(cleanParams).toString();
 
-      const res = await fetch(`${BASE_URL}${url}`, { credentials: "include" });
+      const res = await fetch(`${BASE_URL}${url}`, { headers: getAuthHeaders() });
       if (res.status === 401) return [];
       if (!res.ok) throw new Error('Failed to fetch identities');
       return api.identity.list.responses[200].parse(await res.json());
@@ -51,9 +51,8 @@ export function useSwitchIdentity() {
     mutationFn: async (identityId: number) => {
       const res = await fetch(`${BASE_URL}${api.debug.switchIdentity.path}`, {
         method: api.debug.switchIdentity.method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
         body: JSON.stringify({ identityId }),
-        credentials: "include",
       });
       if (!res.ok) throw new Error('Failed to switch identity');
       return api.debug.switchIdentity.responses[200].parse(await res.json());
@@ -71,7 +70,7 @@ export function useSeedData() {
     mutationFn: async () => {
       const res = await fetch(`${BASE_URL}${api.debug.seed.path}`, {
         method: api.debug.seed.method,
-        credentials: "include",
+        headers: getAuthHeaders(),
       });
       if (!res.ok) throw new Error('Failed to seed data');
       return api.debug.seed.responses[200].parse(await res.json());

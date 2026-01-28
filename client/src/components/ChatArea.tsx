@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { BASE_URL } from "@/lib/api-config";
 import { useMessages, useSendMessage, useDeleteMessage, useEditMessage } from "@/hooks/use-messages";
 import { useConversation } from "@/hooks/use-conversations";
 import { useMyIdentity } from "@/hooks/use-identity";
@@ -178,7 +179,8 @@ export function ChatArea({ conversationId, onBack }: ChatAreaProps) {
           audioRef.current.pause();
       }
 
-      const audio = new Audio(url);
+      const fullUrl = url.startsWith('http') ? url : `${BASE_URL}${url}`;
+      const audio = new Audio(fullUrl);
       audioRef.current = audio;
       
       audio.play().catch(e => console.error("Playback failed", e));

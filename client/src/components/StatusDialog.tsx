@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { X, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { buildUrl } from "@/lib/api-config";
 
 interface StatusDialogProps {
     open: boolean;
@@ -70,7 +71,7 @@ export function StatusDialog({ open, onOpenChange, statuses, initialIndex = 0 }:
                 <div className="absolute top-4 left-0 right-0 z-40 p-4 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <Avatar className="h-10 w-10 border-2 border-primary">
-                            <AvatarImage src={`/api/users/${currentStatus.identity.entityType}/${currentStatus.identity.entityId}/avatar`} />
+                            <AvatarImage src={buildUrl(`/api/users/${currentStatus.identity.entityType}/${currentStatus.identity.entityId}/avatar`)} />
                             <AvatarFallback>{currentStatus.identity.displayName.substring(0,2)}</AvatarFallback>
                         </Avatar>
                         <div>
@@ -89,7 +90,7 @@ export function StatusDialog({ open, onOpenChange, statuses, initialIndex = 0 }:
                 <div className="flex-1 flex items-center justify-center relative bg-black">
                     {currentStatus.mediaUrl ? (
                         <img 
-                            src={currentStatus.mediaUrl} 
+                            src={buildUrl(currentStatus.mediaUrl)} 
                             className="max-h-full max-w-full object-contain" 
                             alt="Status"
                         />

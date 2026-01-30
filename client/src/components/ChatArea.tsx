@@ -179,8 +179,9 @@ export function ChatArea({ conversationId, onBack }: ChatAreaProps) {
         formData.append('file', blob, `voice-note.${extension}`);
         
         try {
-            const res = await fetch('/api/upload', {
+            const res = await fetch(buildUrl('/api/upload'), {
                 method: 'POST',
+                headers: getAuthHeaders(null),
                 body: formData
             });
             
@@ -578,9 +579,9 @@ export function ChatArea({ conversationId, onBack }: ChatAreaProps) {
                                         title={p.role === 'admin' ? 'Already Admin' : "Make Co-Admin"}
                                         onClick={async () => {
                                             if (confirm(`Promote ${p.displayName} to Co-Admin?`)) {
-                                                await fetch(`/api/conversations/${conversationId}/participants/${p.id}/role`, {
+                                                await fetch(buildUrl(`/api/conversations/${conversationId}/participants/${p.id}/role`), {
                                                     method: 'PATCH',
-                                                    headers: { "Content-Type": "application/json" },
+                                                    headers: getAuthHeaders(),
                                                     body: JSON.stringify({ role: 'co-admin' })
                                                 });
                                             }
@@ -594,8 +595,9 @@ export function ChatArea({ conversationId, onBack }: ChatAreaProps) {
                                         className="h-6 w-6 text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
                                         onClick={async () => {
                                             if (confirm(`Remove ${p.displayName} from group?`)) {
-                                                await fetch(`/api/conversations/${conversationId}/participants/${p.id}`, {
-                                                    method: 'DELETE'
+                                                await fetch(buildUrl(`/api/conversations/${conversationId}/participants/${p.id}`), {
+                                                    method: 'DELETE',
+                                                    headers: getAuthHeaders()
                                                 });
                                             }
                                         }}

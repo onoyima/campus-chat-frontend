@@ -7,10 +7,6 @@ export const buildUrl = (path: string) => {
     // If path starts with http, return it
     if (path.startsWith('http')) return path;
 
-    // If BASE_URL is just origin (development proxy case), relative path is fine
-    // But if we want explicit backend optionality:
-    if (BASE_URL === window.location.origin) return path;
-
     // Remove leading slash from path if base url has trailing slash
     const cleanBase = BASE_URL.endsWith('/') ? BASE_URL.slice(0, -1) : BASE_URL;
     const cleanPath = path.startsWith('/') ? path : `/${path}`;
@@ -18,11 +14,13 @@ export const buildUrl = (path: string) => {
     return `${cleanBase}${cleanPath}`;
 };
 
-export function getAuthHeaders(): HeadersInit {
+export function getAuthHeaders(contentType: string | null = "application/json"): HeadersInit {
     const token = localStorage.getItem("auth_token");
-    const headers: HeadersInit = {
-        "Content-Type": "application/json",
-    };
+    const headers: Record<string, string> = {};
+
+    if (contentType) {
+        headers["Content-Type"] = contentType;
+    }
 
     if (token) {
         headers["Authorization"] = `Bearer ${token}`;

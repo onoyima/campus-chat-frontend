@@ -5,7 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useQueryClient, useMutation } from "@tanstack/react-query";
 import { Loader2, Image as ImageIcon, Send } from "lucide-react";
 import { api } from "@shared/routes";
-import { getAuthHeaders } from "@/lib/api-config";
+import { getAuthHeaders, buildUrl } from "@/lib/api-config";
 
 interface CreateStatusDialogProps {
     open: boolean;
@@ -21,12 +21,9 @@ export function CreateStatusDialog({ open, onOpenChange }: CreateStatusDialogPro
 
     const uploadMutation = useMutation({
         mutationFn: async (formData: FormData) => {
-            const authHeaders = getAuthHeaders() as any;
-            delete authHeaders['Content-Type']; // Let browser set boundary for FormData
-
-            const res = await fetch('/api/upload', {
+            const res = await fetch(buildUrl('/api/upload'), {
                 method: 'POST',
-                headers: authHeaders,
+                headers: getAuthHeaders(null),
                 body: formData
             });
             if (!res.ok) throw new Error("Upload failed");
@@ -36,7 +33,7 @@ export function CreateStatusDialog({ open, onOpenChange }: CreateStatusDialogPro
 
     const createStatusMutation = useMutation({
         mutationFn: async (data: { content: string, mediaUrl?: string }) => {
-            const res = await fetch(api.status.create.path, {
+            const res = await fetch(buildUrl(api.status.create.path), {
                 method: 'POST',
                 headers: getAuthHeaders(),
                 body: JSON.stringify(data)

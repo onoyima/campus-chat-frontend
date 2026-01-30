@@ -1,5 +1,5 @@
 import { useConversations } from "@/hooks/use-conversations";
-import { getAuthHeaders } from "@/lib/api-config";
+import { getAuthHeaders, buildUrl } from "@/lib/api-config";
 import { useMyIdentity, useSwitchIdentity } from "@/hooks/use-identity";
 import { useAuth } from "@/hooks/use-auth";
 import { useNotifications } from "@/hooks/use-notifications";
@@ -71,7 +71,7 @@ export function Sidebar({ activeConversationId, onSelectConversation, isMobileOp
   const { data: statusUpdates } = useQuery({
       queryKey: [api.status.list.path],
       queryFn: async () => {
-          const res = await fetch(api.status.list.path, { headers: getAuthHeaders() });
+          const res = await fetch(buildUrl(api.status.list.path), { headers: getAuthHeaders() });
           return await res.json();
       }
   });
@@ -256,7 +256,7 @@ export function Sidebar({ activeConversationId, onSelectConversation, isMobileOp
                 >
                     <div className="relative">
                         <Avatar className={cn("h-12 w-12 border-2 underline-offset-4 ring-offset-2 transition-all", myStatus ? "border-primary ring-2 ring-primary/20 scale-105" : "border-dashed border-muted-foreground")}>
-                            <AvatarImage src={myStatus?.updates[0]?.mediaUrl || `/api/users/${myIdentity?.entityType}/${myIdentity?.entityId}/avatar`} className="object-cover" />
+                            <AvatarImage src={myStatus?.updates[0]?.mediaUrl ? buildUrl(myStatus.updates[0].mediaUrl) : buildUrl(`/api/users/${myIdentity?.entityType}/${myIdentity?.entityId}/avatar`)} className="object-cover" />
                             <AvatarFallback>{myIdentity?.displayName?.substring(0,2)}</AvatarFallback>
                         </Avatar>
                         {!myStatus && (
@@ -297,7 +297,7 @@ export function Sidebar({ activeConversationId, onSelectConversation, isMobileOp
                                 }}
                             >
                                 <Avatar className="h-10 w-10 border-2 border-primary ring-2 ring-background">
-                                    <AvatarImage src={`/api/users/${group.identity.entityType}/${group.identity.entityId}/avatar`} />
+                                    <AvatarImage src={buildUrl(`/api/users/${group.identity.entityType}/${group.identity.entityId}/avatar`)} />
                                     <AvatarFallback>{group.identity.displayName.substring(0,2)}</AvatarFallback>
                                 </Avatar>
                                 <div>
@@ -421,7 +421,7 @@ export function Sidebar({ activeConversationId, onSelectConversation, isMobileOp
                       <div className="relative">
                          <Avatar className="h-12 w-12 border-2 border-background shadow-sm transition-transform group-hover:scale-105">
                             {display.entityId && display.entityType ? (
-                                <AvatarImage src={`/api/users/${display.entityType}/${display.entityId}/avatar`} />
+                                <AvatarImage src={buildUrl(`/api/users/${display.entityType}/${display.entityId}/avatar`)} />
                             ) : null}
                             <AvatarFallback className={cn("text-white font-bold", isActive ? "bg-primary" : "bg-muted-foreground")}>
                                 {display.initials}

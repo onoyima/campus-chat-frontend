@@ -26,6 +26,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useMyIdentity } from "@/hooks/use-identity";
 import { Link } from "wouter";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { getAuthHeaders } from "@/lib/api-config";
 
 export default function AdminPage() {
   const { data: me, isLoading: meLoading } = useMyIdentity();
@@ -114,7 +115,7 @@ function DashboardOverview() {
     const { data: stats, isLoading } = useQuery({
         queryKey: ['/api/admin/stats'],
         queryFn: async () => {
-            const res = await fetch('/api/admin/stats');
+            const res = await fetch('/api/admin/stats', { headers: getAuthHeaders() });
             return await res.json();
         }
     });
@@ -178,7 +179,9 @@ function UserManagement() {
       queryKey: ['/api/admin/global-search', search],
       queryFn: async () => {
           if (!search) return [];
-          const res = await fetch(`/api/admin/search?q=${search}`, { credentials: "include" });
+          const res = await fetch(`/api/admin/search?q=${search}`, { 
+            headers: getAuthHeaders() 
+          });
           return await res.json();
       },
       enabled: search.length > 2
@@ -188,7 +191,9 @@ function UserManagement() {
     const { data: registeredUsers, isLoading: regLoading } = useQuery({
         queryKey: [api.admin.users.path],
         queryFn: async () => {
-             const res = await fetch(api.admin.users.path, { credentials: "include" });
+             const res = await fetch(api.admin.users.path, { 
+               headers: getAuthHeaders() 
+             });
              return await res.json();
         }
     });
@@ -313,14 +318,17 @@ function GroupManagement() {
     const { data: groups, isLoading } = useQuery({
         queryKey: ['/api/admin/groups'],
         queryFn: async () => {
-            const res = await fetch('/api/admin/groups');
+            const res = await fetch('/api/admin/groups', { headers: getAuthHeaders() });
             return await res.json();
         }
     });
     
     const deleteGroup = useMutation({
         mutationFn: async (id: number) => {
-            const res = await fetch(`/api/admin/groups/${id}`, { method: 'DELETE' });
+            const res = await fetch(`/api/admin/groups/${id}`, { 
+                method: 'DELETE',
+                headers: getAuthHeaders()
+            });
             if (!res.ok) throw new Error("Failed to delete group");
         },
         onSuccess: () => {
@@ -385,7 +393,7 @@ function useProvisionUser() {
         mutationFn: async (data: { entityType: string, entityId: number }) => {
             const res = await fetch('/api/admin/users/provision', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: getAuthHeaders(),
                 body: JSON.stringify(data)
             });
             if (!res.ok) throw new Error("Failed to activate user");
@@ -408,9 +416,8 @@ function useUpdateRole() {
     mutationFn: async ({ id, role }: { id: number, role: string }) => {
       const res = await fetch(`/api/admin/users/${id}/role`, {
         method: 'POST',
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ role }),
-        credentials: "include"
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ role })
       });
       if (!res.ok) throw new Error("Failed to update role");
       return await res.json();
@@ -434,9 +441,8 @@ function useToggleSuspension() {
     mutationFn: async ({ id, isSuspended }: { id: number, isSuspended: boolean }) => {
       const res = await fetch(`/api/admin/users/${id}/suspend`, {
         method: 'POST',
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ isSuspended }),
-        credentials: "include"
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ isSuspended })
       });
       if (!res.ok) throw new Error("Failed to update suspension status");
       return await res.json();

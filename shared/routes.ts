@@ -30,7 +30,7 @@ export const api = {
     },
     list: {
       method: 'GET' as const,
-      path: '/api/identities', 
+      path: '/api/identities',
       input: z.object({
         search: z.string().optional(),
         role: z.string().optional(),
@@ -54,7 +54,7 @@ export const api = {
           name: z.string().nullable(),
           lastMessage: z.custom<typeof messages.$inferSelect>().optional(),
           unreadCount: z.number(),
-          participants: z.array(z.custom<typeof participants.$inferSelect>()),
+          participants: z.array(z.any()),
         })),
       },
     },
@@ -67,7 +67,7 @@ export const api = {
       responses: {
         201: z.custom<typeof conversations.$inferSelect>(),
         400: errorSchemas.validation,
-        403: errorSchemas.forbidden, 
+        403: errorSchemas.forbidden,
       },
     },
     get: {
@@ -76,9 +76,16 @@ export const api = {
       responses: {
         200: z.object({
           conversation: z.custom<typeof conversations.$inferSelect>(),
-          participants: z.array(z.custom<typeof chatIdentities.$inferSelect>()), 
+          participants: z.array(z.any()),
         }),
         404: errorSchemas.notFound,
+      },
+    },
+    markRead: {
+      method: 'POST' as const,
+      path: '/api/conversations/:id/read',
+      responses: {
+        200: z.object({ success: z.boolean() }),
       },
     },
   },
@@ -114,73 +121,73 @@ export const api = {
   // Notifications
   notifications: {
     list: {
-        method: 'GET' as const,
-        path: '/api/notifications',
-        responses: {
-            200: z.array(z.custom<typeof notifications.$inferSelect>()),
-        },
+      method: 'GET' as const,
+      path: '/api/notifications',
+      responses: {
+        200: z.array(z.custom<typeof notifications.$inferSelect>()),
+      },
     },
     markRead: {
-        method: 'POST' as const,
-        path: '/api/notifications/:id/read',
-        responses: {
-            200: z.object({ success: z.boolean() }),
-        },
+      method: 'POST' as const,
+      path: '/api/notifications/:id/read',
+      responses: {
+        200: z.object({ success: z.boolean() }),
+      },
     },
   },
 
   // Status Updates
   status: {
     list: {
-        method: 'GET' as const,
-        path: '/api/status-updates',
-        responses: {
-            200: z.array(z.custom<typeof statusUpdates.$inferSelect>()),
-        },
+      method: 'GET' as const,
+      path: '/api/status-updates',
+      responses: {
+        200: z.array(z.custom<typeof statusUpdates.$inferSelect>()),
+      },
     },
     create: {
-        method: 'POST' as const,
-        path: '/api/status-updates',
-        input: z.object({
-            content: z.string().optional(),
-            mediaUrl: z.string().optional(),
-        }),
-        responses: {
-            201: z.custom<typeof statusUpdates.$inferSelect>(),
-        },
+      method: 'POST' as const,
+      path: '/api/status-updates',
+      input: z.object({
+        content: z.string().optional(),
+        mediaUrl: z.string().optional(),
+      }),
+      responses: {
+        201: z.custom<typeof statusUpdates.$inferSelect>(),
+      },
     },
   },
 
   // Calls
   calls: {
     initiate: {
-        method: 'POST' as const,
-        path: '/api/calls/initiate',
-        input: z.object({
-            targetIdentityId: z.number(),
-            type: z.enum(['voice', 'video']),
-        }),
-        responses: {
-            201: z.custom<typeof calls.$inferSelect>(),
-        },
+      method: 'POST' as const,
+      path: '/api/calls/initiate',
+      input: z.object({
+        targetIdentityId: z.number(),
+        type: z.enum(['voice', 'video']),
+      }),
+      responses: {
+        201: z.custom<typeof calls.$inferSelect>(),
+      },
     },
     list: {
-        method: 'GET' as const,
-        path: '/api/calls',
-        responses: {
-            200: z.array(z.custom<typeof calls.$inferSelect>()),
-        },
+      method: 'GET' as const,
+      path: '/api/calls',
+      responses: {
+        200: z.array(z.custom<typeof calls.$inferSelect>()),
+      },
     },
   },
 
   // Admin
   admin: {
     users: {
-        method: 'GET' as const,
-        path: '/api/admin/users',
-        responses: {
-            200: z.array(z.custom<typeof chatIdentities.$inferSelect>()),
-        },
+      method: 'GET' as const,
+      path: '/api/admin/users',
+      responses: {
+        200: z.array(z.custom<typeof chatIdentities.$inferSelect>()),
+      },
     },
   },
 

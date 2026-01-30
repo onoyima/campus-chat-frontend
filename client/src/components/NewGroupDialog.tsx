@@ -11,6 +11,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Search, Users, Loader2, ShieldAlert } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { getAuthHeaders } from "@/lib/api-config";
 
 interface NewGroupDialogProps {
   onClose: () => void;
@@ -117,9 +118,8 @@ function useCreateGroupChat() {
     mutationFn: async (data: { name: string, participantIds: number[] }) => {
       const res = await fetch("/api/conversations/group", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-        credentials: "include",
+        headers: getAuthHeaders(),
+        body: JSON.stringify(data)
       });
 
       if (!res.ok) throw new Error("Failed to create group");

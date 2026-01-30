@@ -1,4 +1,5 @@
 import { useConversations } from "@/hooks/use-conversations";
+import { getAuthHeaders } from "@/lib/api-config";
 import { useMyIdentity, useSwitchIdentity } from "@/hooks/use-identity";
 import { useAuth } from "@/hooks/use-auth";
 import { useNotifications } from "@/hooks/use-notifications";
@@ -14,9 +15,11 @@ import {
   User, 
   Shield, 
   Settings2,
-  Bell
+  Bell,
+  Users,
+  MessageCircle
 } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
+import { format, formatDistanceToNow, isSameDay, isYesterday } from "date-fns";
 import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
@@ -56,6 +59,10 @@ export function Sidebar({ activeConversationId, onSelectConversation, isMobileOp
 
   // Status State
   const [activeTab, setActiveTab] = useState<'chats' | 'status'>('chats');
+  
+  // Chat Filter State
+  const [chatSearchQuery, setChatSearchQuery] = useState("");
+  const [chatFilterTab, setChatFilterTab] = useState<'all' | 'people' | 'groups'>('all');
   const [viewStatusOpen, setViewStatusOpen] = useState(false);
   const [createStatusOpen, setCreateStatusOpen] = useState(false);
   const [selectedStatusUser, setSelectedStatusUser] = useState<any[]>([]);
@@ -64,14 +71,14 @@ export function Sidebar({ activeConversationId, onSelectConversation, isMobileOp
   const { data: statusUpdates } = useQuery({
       queryKey: [api.status.list.path],
       queryFn: async () => {
-          const res = await fetch(api.status.list.path);
+          const res = await fetch(api.status.list.path, { headers: getAuthHeaders() });
           return await res.json();
       }
   });
 
   // Group statuses by user
   const groupedStatuses = (statusUpdates || []).reduce((acc: any, status: any) => {
-      const id = status.identityId;
+      const id = String(status.identityId);
       if (!acc[id]) {
           acc[id] = {
               identity: status.identity,
@@ -82,8 +89,26 @@ export function Sidebar({ activeConversationId, onSelectConversation, isMobileOp
       return acc;
   }, {});
 
-  const myStatus = groupedStatuses[myIdentity?.id || 0];
-  const otherStatuses = Object.values(groupedStatuses).filter((g: any) => g.identity.id !== myIdentity?.id);
+  const myStatus = groupedStatuses[String(myIdentity?.id || 0)];
+  const otherStatuses = Object.values(groupedStatuses).filter((g: any) => String(g.identity.id) !== String(myIdentity?.id));
+
+  // Filter and search conversations
+  const filteredConversations = conversations?.filter((conv) => {
+    // Apply type filter
+    if (chatFilterTab === 'people' && conv.type !== 'DIRECT') return false;
+    if (chatFilterTab === 'groups' && conv.type !== 'GROUP') return false;
+    
+    // Apply search filter
+    if (chatSearchQuery.trim()) {
+      const query = chatSearchQuery.toLowerCase();
+      const display = getDisplayInfo(conv);
+      const nameMatch = display.name.toLowerCase().includes(query);
+      const lastMessageMatch = conv.lastMessage?.content?.toLowerCase().includes(query);
+      return nameMatch || lastMessageMatch;
+    }
+    
+    return true;
+  }) || [];
 
   // Helper to get conversation display info
   const getDisplayInfo = (conv: any) => {
@@ -181,8 +206,14 @@ export function Sidebar({ activeConversationId, onSelectConversation, isMobileOp
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                  
+                  <DropdownMenuLabel>My Account ({myIdentity?.displayName})</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <div className="flex items-center gap-2 p-2 px-3 text-xs text-muted-foreground bg-muted/30 rounded-md mb-1 mx-1">
+                        <User className="h-3 w-3" />
+                         Logged in as {myIdentity?.role}
+                    </div>
+                  </DropdownMenuItem>
                   {['SUPER_ADMIN', 'VC'].includes(myIdentity?.role || '') && (
                       <DropdownMenuItem asChild>
                         <Link href="/admin" className="flex items-center gap-2 cursor-pointer w-full">
@@ -224,8 +255,8 @@ export function Sidebar({ activeConversationId, onSelectConversation, isMobileOp
                     }}
                 >
                     <div className="relative">
-                        <Avatar className={cn("h-12 w-12 border-2", myStatus ? "border-primary" : "border-dashed border-muted-foreground")}>
-                            <AvatarImage src={`/api/users/${myIdentity?.entityType}/${myIdentity?.entityId}/avatar`} />
+                        <Avatar className={cn("h-12 w-12 border-2 underline-offset-4 ring-offset-2 transition-all", myStatus ? "border-primary ring-2 ring-primary/20 scale-105" : "border-dashed border-muted-foreground")}>
+                            <AvatarImage src={myStatus?.updates[0]?.mediaUrl || `/api/users/${myIdentity?.entityType}/${myIdentity?.entityId}/avatar`} className="object-cover" />
                             <AvatarFallback>{myIdentity?.displayName?.substring(0,2)}</AvatarFallback>
                         </Avatar>
                         {!myStatus && (
@@ -236,8 +267,8 @@ export function Sidebar({ activeConversationId, onSelectConversation, isMobileOp
                     </div>
                     <div className="flex-1">
                         <h3 className="font-semibold text-sm">My Status</h3>
-                        <p className="text-xs text-muted-foreground">
-                            {myStatus ? `${myStatus.updates.length} updates` : "Tap to add status update"}
+                        <p className="text-xs text-primary font-medium">
+                            {myStatus ? (myStatus.updates.length === 1 ? "1 active update" : `${myStatus.updates.length} updates`) : "Tap to add status update"}
                         </p>
                     </div>
                     {myStatus && (
@@ -302,8 +333,51 @@ export function Sidebar({ activeConversationId, onSelectConversation, isMobileOp
       {/* Content Area - Chat List */}
       <ScrollArea className="flex-1">
         {activeTab === 'chats' && (
-            <div className="p-2 space-y-1">
-              {/* ... existing chat list code ... */}
+            <div className="p-2 space-y-3">
+              {/* Search Input */}
+              <div className="relative px-2">
+                <Search className="absolute left-5 top-3 h-4 w-4 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder="Search conversations..."
+                  className="w-full pl-10 pr-4 py-2.5 text-sm bg-secondary/50 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                  value={chatSearchQuery}
+                  onChange={(e) => setChatSearchQuery(e.target.value)}
+                />
+              </div>
+
+              {/* Filter Tabs */}
+              <div className="flex items-center gap-1 px-2">
+                <Button
+                  variant={chatFilterTab === 'all' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setChatFilterTab('all')}
+                  className="flex-1 h-8 text-xs"
+                >
+                  <MessageCircle className="h-3.5 w-3.5 mr-1.5" />
+                  All
+                </Button>
+                <Button
+                  variant={chatFilterTab === 'people' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setChatFilterTab('people')}
+                  className="flex-1 h-8 text-xs"
+                >
+                  <User className="h-3.5 w-3.5 mr-1.5" />
+                  People
+                </Button>
+                <Button
+                  variant={chatFilterTab === 'groups' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setChatFilterTab('groups')}
+                  className="flex-1 h-8 text-xs"
+                >
+                  <Users className="h-3.5 w-3.5 mr-1.5" />
+                  Groups
+                </Button>
+              </div>
+
+              {/* Chat List */}
               {isLoading ? (
                 Array(5).fill(0).map((_, i) => (
                    <div key={i} className="flex items-center gap-3 p-3 rounded-lg">
@@ -314,13 +388,22 @@ export function Sidebar({ activeConversationId, onSelectConversation, isMobileOp
                     </div>
                   </div>
                 ))
-              ) : conversations?.length === 0 ? (
+              ) : filteredConversations.length === 0 ? (
                 <div className="text-center p-8 text-muted-foreground text-sm">
-                  <p>No conversations yet.</p>
-                  <p className="mt-1">Start a new chat!</p>
+                  {chatSearchQuery || chatFilterTab !== 'all' ? (
+                    <>
+                      <p>No conversations found.</p>
+                      <p className="mt-1">Try a different search or filter.</p>
+                    </>
+                  ) : (
+                    <>
+                      <p>No conversations yet.</p>
+                      <p className="mt-1">Start a new chat!</p>
+                    </>
+                  )}
                 </div>
               ) : (
-                conversations?.map((conv) => {
+                filteredConversations.map((conv) => {
                   const display = getDisplayInfo(conv);
                   const isActive = activeConversationId === conv.id;
                   
@@ -356,7 +439,16 @@ export function Sidebar({ activeConversationId, onSelectConversation, isMobileOp
                           </h3>
                           {conv.lastMessage?.createdAt && (
                             <span className="text-[10px] text-muted-foreground shrink-0 font-medium opacity-70">
-                              {formatDistanceToNow(new Date(conv.lastMessage.createdAt), { addSuffix: false }).replace('about ', '')}
+                              {(() => {
+                                const d = new Date(conv.lastMessage.createdAt);
+                                if (isSameDay(d, new Date())) {
+                                  return format(d, 'HH:mm');
+                                }
+                                if (isYesterday(d)) {
+                                  return 'Yesterday';
+                                }
+                                return format(d, 'MMM d');
+                              })()}
                             </span>
                           )}
                         </div>
@@ -370,7 +462,7 @@ export function Sidebar({ activeConversationId, onSelectConversation, isMobileOp
                             </p>
                             
                             {conv.unreadCount > 0 && (
-                                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-white shadow-sm">
+                                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-[10px] font-bold text-white shadow-sm animate-in zoom-in duration-300">
                                     {conv.unreadCount}
                                 </span>
                             )}

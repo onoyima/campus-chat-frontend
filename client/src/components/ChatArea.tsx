@@ -11,6 +11,7 @@ import { Send, Paperclip, MoreVertical, Phone, Video, Loader2, ArrowLeft, Info, 
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { buildUrl, getAuthHeaders } from "@/lib/api-config";
 import { Badge } from "@/components/ui/badge";
 import {
     DropdownMenu,
@@ -38,6 +39,64 @@ export function ChatArea({ conversationId, onBack }: ChatAreaProps) {
   const [inputValue, setInputValue] = useState("");
   const [infoOpen, setInfoOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const unreadRef = useRef<HTMLDivElement>(null);
+  const [hasScrolledInitial, setHasScrolledInitial] = useState(false);
+
+  // Mark Read Logic
+  useEffect(() => {
+    if (conversationId && myIdentity) {
+        const markRead = async () => {
+            try {
+                await fetch(buildUrl(`/api/conversations/${conversationId}/read`), {
+                    method: 'POST',
+                    headers: getAuthHeaders()
+                });
+            } catch (err) {
+                console.error("Failed to mark read", err);
+            }
+        };
+        markRead();
+    }
+  }, [conversationId, myIdentity]);
+
+  // Find first unread message
+  const firstUnreadIndex = messages?.findIndex(msg => 
+    msg.senderIdentityId !== myIdentity?.id && 
+    !(msg as any).statuses?.some((s: any) => s.identityId === myIdentity?.id && s.status === 'read')
+  );
+
+  // Initial Scroll Logic
+  useEffect(() => {
+    if (!messagesLoading && messages && messages.length > 0 && !hasScrolledInitial) {
+        setTimeout(() => {
+            if (firstUnreadIndex !== undefined && firstUnreadIndex !== -1 && unreadRef.current) {
+                unreadRef.current.scrollIntoView({ behavior: 'auto', block: 'center' });
+            } else if (bottomRef.current) {
+                bottomRef.current.scrollIntoView({ behavior: 'auto' });
+            }
+            setHasScrolledInitial(true);
+        }, 100);
+    }
+  }, [messagesLoading, conversationId, hasScrolledInitial, firstUnreadIndex, messages]);
+
+  // Reset initial scroll on conversation change
+  useEffect(() => {
+      setHasScrolledInitial(false);
+  }, [conversationId]);
+
+  // Auto-scroll for new messages
+  useEffect(() => {
+    if (hasScrolledInitial && messages && messages.length > 0) {
+        const lastMsg = messages[messages.length - 1];
+        if (lastMsg.senderIdentityId === myIdentity?.id) {
+            bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+        } else {
+            // Only auto-scroll if user is already near bottom? 
+            // For now, let's keep it simple and just scroll if it's my message.
+        }
+    }
+  }, [messages?.length]);
   
   // Edit State
   const [editingMessageId, setEditingMessageId] = useState<number | null>(null);
@@ -282,6 +341,7 @@ export function ChatArea({ conversationId, onBack }: ChatAreaProps) {
               return (
                 <div 
                   key={msg.id} 
+                  ref={index === firstUnreadIndex ? unreadRef : null}
                   className={cn(
                     "flex gap-2 max-w-[85%] md:max-w-[70%]",
                     isMe ? "self-end flex-row-reverse" : "self-start"
@@ -407,9 +467,23 @@ export function ChatArea({ conversationId, onBack }: ChatAreaProps) {
                       isMe ? "text-foreground" : "text-muted-foreground"
                     )}>
                       {msg.isEdited && <span className="italic mr-1">(edited)</span>}
-                      {msg.createdAt && format(new Date(msg.createdAt), 'MMM d, HH:mm')}
+                      {msg.createdAt && (
+                        (() => {
+                            const d = new Date(msg.createdAt);
+                            const isToday = d.toDateString() === new Date().toDateString();
+                            return isToday ? format(d, 'HH:mm') : format(d, 'MMM d, HH:mm');
+                        })()
+                      )}
                       {isMe && (
-                          <CheckCheck className="h-3 w-3 text-blue-500" />
+                        <div className="flex items-center">
+                            {(() => {
+                                const readByRecipients = (msg as any).statuses?.some((s: any) => s.identityId !== myIdentity?.id && s.status === 'read');
+                                if (readByRecipients) {
+                                    return <CheckCheck className="h-3 w-3 text-blue-500" />;
+                                }
+                                return <Check className="h-3 w-3" />;
+                            })()}
+                        </div>
                       )}
                     </div>
                   </div>
@@ -417,7 +491,7 @@ export function ChatArea({ conversationId, onBack }: ChatAreaProps) {
               );
             })
           )}
-          <div ref={scrollRef} />
+          <div ref={bottomRef} className="h-2" />
         </div>
       </ScrollArea>
       

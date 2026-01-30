@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useIdentities } from "@/hooks/use-identity";
+import { useIdentities, useMyIdentity } from "@/hooks/use-identity";
 import { useCreateDirectChat } from "@/hooks/use-conversations";
 import { DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,7 @@ interface NewChatDialogProps {
 
 export function NewChatDialog({ onClose }: NewChatDialogProps) {
   const [searchTerm, setSearchTerm] = useState("");
+  const { data: myIdentity } = useMyIdentity();
   const { data: identities, isLoading } = useIdentities({ search: searchTerm });
   const createChat = useCreateDirectChat();
 
@@ -68,7 +69,9 @@ export function NewChatDialog({ onClose }: NewChatDialogProps) {
                     <AvatarFallback>{user.displayName.substring(0, 2)}</AvatarFallback>
                   </Avatar>
                   <div>
-                    <h4 className="font-semibold text-sm">{user.displayName}</h4>
+                    <h4 className="font-semibold text-sm">
+                        {user.displayName} {user.id === myIdentity?.id && "(You)"}
+                    </h4>
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-mono bg-primary/10 text-primary px-1.5 py-0.5 rounded">
                         {user.role}

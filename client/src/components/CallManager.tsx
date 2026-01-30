@@ -58,7 +58,7 @@ export function CallManager() {
 
         pc.onconnectionstatechange = () => {
             if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') {
-                endCall();
+                endCall(false);
             }
         };
         
@@ -263,7 +263,7 @@ export function CallManager() {
                             variant="destructive" 
                             size="icon" 
                             className="h-16 w-16 rounded-full"
-                            onClick={endCall}
+                            onClick={() => endCall(true)}
                         >
                             <X className="h-8 w-8" />
                         </Button>
@@ -341,7 +341,7 @@ export function CallManager() {
                             variant="destructive" 
                             size="icon" 
                             className="h-14 w-14 rounded-full"
-                            onClick={endCall}
+                            onClick={() => endCall(true)}
                         >
                             <PhoneIncoming className="h-6 w-6 rotate-[135deg]" />
                         </Button>

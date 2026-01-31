@@ -11,7 +11,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Search, Users, Loader2, ShieldAlert } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { getAuthHeaders } from "@/lib/api-config";
+import { buildUrl, getAuthHeaders } from "@/lib/api-config";
 
 interface NewGroupDialogProps {
   onClose: () => void;
@@ -116,7 +116,7 @@ function useCreateGroupChat() {
 
   return useMutation({
     mutationFn: async (data: { name: string, participantIds: number[] }) => {
-      const res = await fetch("/api/conversations/group", {
+      const res = await fetch(buildUrl("/api/conversations/group"), {
         method: "POST",
         headers: getAuthHeaders(),
         body: JSON.stringify(data)

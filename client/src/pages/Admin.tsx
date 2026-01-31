@@ -26,7 +26,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useMyIdentity } from "@/hooks/use-identity";
 import { Link } from "wouter";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { getAuthHeaders } from "@/lib/api-config";
+import { buildUrl, getAuthHeaders } from "@/lib/api-config";
 
 export default function AdminPage() {
   const { data: me, isLoading: meLoading } = useMyIdentity();
@@ -115,7 +115,7 @@ function DashboardOverview() {
     const { data: stats, isLoading } = useQuery({
         queryKey: ['/api/admin/stats'],
         queryFn: async () => {
-            const res = await fetch('/api/admin/stats', { headers: getAuthHeaders() });
+            const res = await fetch(buildUrl('/api/admin/stats'), { headers: getAuthHeaders() });
             return await res.json();
         }
     });
@@ -179,7 +179,7 @@ function UserManagement() {
       queryKey: ['/api/admin/global-search', search],
       queryFn: async () => {
           if (!search) return [];
-          const res = await fetch(`/api/admin/search?q=${search}`, { 
+          const res = await fetch(buildUrl(`/api/admin/search?q=${encodeURIComponent(search)}`), { 
             headers: getAuthHeaders() 
           });
           return await res.json();
@@ -191,7 +191,7 @@ function UserManagement() {
     const { data: registeredUsers, isLoading: regLoading } = useQuery({
         queryKey: [api.admin.users.path],
         queryFn: async () => {
-             const res = await fetch(api.admin.users.path, { 
+             const res = await fetch(buildUrl(api.admin.users.path), { 
                headers: getAuthHeaders() 
              });
              return await res.json();
@@ -239,7 +239,7 @@ function UserManagement() {
                                 <TableRow key={`${user.entityType}-${user.id}`}>
                                     <TableCell>
                                         <Avatar className="h-8 w-8">
-                                            <AvatarImage src={`/api/users/${user.entityType}/${user.entityId || user.id}/avatar`} />
+                                            <AvatarImage src={buildUrl(`/api/users/${user.entityType}/${user.entityId || user.id}/avatar`)} />
                                             <AvatarFallback>{user.displayName?.substring(0,2)}</AvatarFallback>
                                         </Avatar>
                                     </TableCell>
@@ -318,14 +318,14 @@ function GroupManagement() {
     const { data: groups, isLoading } = useQuery({
         queryKey: ['/api/admin/groups'],
         queryFn: async () => {
-            const res = await fetch('/api/admin/groups', { headers: getAuthHeaders() });
+            const res = await fetch(buildUrl('/api/admin/groups'), { headers: getAuthHeaders() });
             return await res.json();
         }
     });
     
     const deleteGroup = useMutation({
         mutationFn: async (id: number) => {
-            const res = await fetch(`/api/admin/groups/${id}`, { 
+            const res = await fetch(buildUrl(`/api/admin/groups/${id}`), { 
                 method: 'DELETE',
                 headers: getAuthHeaders()
             });
@@ -391,7 +391,7 @@ function useProvisionUser() {
 
     return useMutation({
         mutationFn: async (data: { entityType: string, entityId: number }) => {
-            const res = await fetch('/api/admin/users/provision', {
+            const res = await fetch(buildUrl('/api/admin/users/provision'), {
                 method: 'POST',
                 headers: getAuthHeaders(),
                 body: JSON.stringify(data)
@@ -414,7 +414,7 @@ function useUpdateRole() {
 
   return useMutation({
     mutationFn: async ({ id, role }: { id: number, role: string }) => {
-      const res = await fetch(`/api/admin/users/${id}/role`, {
+      const res = await fetch(buildUrl(`/api/admin/users/${id}/role`), {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify({ role })
@@ -439,7 +439,7 @@ function useToggleSuspension() {
 
   return useMutation({
     mutationFn: async ({ id, isSuspended }: { id: number, isSuspended: boolean }) => {
-      const res = await fetch(`/api/admin/users/${id}/suspend`, {
+      const res = await fetch(buildUrl(`/api/admin/users/${id}/suspend`), {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify({ isSuspended })

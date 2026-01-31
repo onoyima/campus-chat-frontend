@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, buildUrl } from "@shared/routes";
+import { api } from "@shared/routes";
 import { useAuth } from "@/hooks/use-auth";
-import { BASE_URL, getAuthHeaders } from "@/lib/api-config";
+import { buildUrl, getAuthHeaders } from "@/lib/api-config";
 
 // GET /api/identity/me
 export function useMyIdentity() {
@@ -10,7 +10,7 @@ export function useMyIdentity() {
   return useQuery({
     queryKey: [api.identity.me.path],
     queryFn: async () => {
-      const res = await fetch(`${BASE_URL}${api.identity.me.path}`, { headers: getAuthHeaders() });
+      const res = await fetch(buildUrl(api.identity.me.path), { headers: getAuthHeaders() });
       if (res.status === 401) return null;
       if (res.status === 404) return null; // Not set up yet
       if (!res.ok) throw new Error('Failed to fetch identity');
@@ -33,9 +33,10 @@ export function useIdentities(params?: { search?: string; role?: string; departm
       if (params?.role) cleanParams.role = params.role;
       if (params?.departmentId) cleanParams.departmentId = String(params.departmentId);
 
-      const url = buildUrl(api.identity.list.path) + "?" + new URLSearchParams(cleanParams).toString();
+      const queryString = new URLSearchParams(cleanParams).toString();
+      const url = buildUrl(api.identity.list.path + (queryString ? `?${queryString}` : ''));
 
-      const res = await fetch(`${BASE_URL}${url}`, { headers: getAuthHeaders() });
+      const res = await fetch(url, { headers: getAuthHeaders() });
       if (res.status === 401) return [];
       if (!res.ok) throw new Error('Failed to fetch identities');
       return api.identity.list.responses[200].parse(await res.json());
@@ -49,9 +50,9 @@ export function useSwitchIdentity() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (identityId: number) => {
-      const res = await fetch(`${BASE_URL}${api.debug.switchIdentity.path}`, {
+      const res = await fetch(buildUrl(api.debug.switchIdentity.path), {
         method: api.debug.switchIdentity.method,
-        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ identityId }),
       });
       if (!res.ok) throw new Error('Failed to switch identity');
@@ -68,7 +69,7 @@ export function useSwitchIdentity() {
 export function useSeedData() {
   return useMutation({
     mutationFn: async () => {
-      const res = await fetch(`${BASE_URL}${api.debug.seed.path}`, {
+      const res = await fetch(buildUrl(api.debug.seed.path), {
         method: api.debug.seed.method,
         headers: getAuthHeaders(),
       });

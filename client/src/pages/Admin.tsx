@@ -179,7 +179,7 @@ function UserManagement() {
       queryKey: ['/api/admin/global-search', search],
       queryFn: async () => {
           if (!search) return [];
-          const res = await fetch(buildUrl(`/api/admin/search?q=${encodeURIComponent(search)}`), { 
+          const res = await fetch(buildUrl(`/api/admin/global-search?q=${encodeURIComponent(search)}`), { 
             headers: getAuthHeaders() 
           });
           return await res.json();
